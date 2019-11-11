@@ -281,14 +281,15 @@ wait(void)
     // Scan through table looking for exited children.
     havekids = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->parent != curproc)
+      if(p->parent != curproc) // 跳过非子进程
         continue;
-      havekids = 1;
-      if(p->state == ZOMBIE){
+      havekids = 1; // 有子进程
+      if(p->state == ZOMBIE){ // 子进程ZOMBIE
         // Found one.
+        // 重置子进程
         pid = p->pid;
-        kfree(p->kstack);
-        p->kstack = 0;
+        kfree(p->kstack); // 释放物理页
+        p->kstack = 0; 
         freevm(p->pgdir);
         p->pid = 0;
         p->parent = 0;
@@ -301,7 +302,7 @@ wait(void)
     }
 
     // No point waiting if we don't have any children.
-    if(!havekids || curproc->killed){
+    if(!havekids || curproc->killed){ // 无子进程或被killed
       release(&ptable.lock);
       return -1;
     }
@@ -368,20 +369,22 @@ sched(void)
   int intena;
   struct proc *p = myproc();
 
-  if(!holding(&ptable.lock))
+  if(!holding(&ptable.lock)) // 确保占有ptable.lock
     panic("sched ptable.lock");
-  if(mycpu()->ncli != 1)
+  if(mycpu()->ncli != 1) // 确保关中断栈深度只有1
     panic("sched locks");
-  if(p->state == RUNNING)
+  if(p->state == RUNNING) // 确保进程不在RUNNING
     panic("sched running");
-  if(readeflags()&FL_IF)
+  if(readeflags()&FL_IF) // 确保中断已经关闭
     panic("sched interruptible");
-  intena = mycpu()->intena;
-  swtch(&p->context, mycpu()->scheduler);
-  mycpu()->intena = intena;
+  intena = mycpu()->intena; // 本地保存intena状态
+  swtch(&p->context, mycpu()->scheduler); // 保存上下文（把寄存器状态保存在栈中），然后切换到新的上下文（新的地址保存在老的里）
+  mycpu()->intena = intena; // 恢复intena状态
+  // 总的来说就是在满足条件的情况下，把上下文从当前进程转到scheduler()去
 }
 
 // Give up the CPU for one scheduling round.
+// 让出CPU
 void
 yield(void)
 {
