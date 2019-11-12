@@ -142,6 +142,11 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
+  p->ctime = ticks;
+  p->rutime = 0;
+  p->retime = 0;
+  p->sltime = 0;
+
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
   // writes to be visible, and the lock is also needed
@@ -209,6 +214,11 @@ fork(void)
   np->cwd = idup(curproc->cwd);
 
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+
+  np->ctime = ticks;
+  np->rutime = 0;
+  np->retime = 0;
+  np->sltime = 0;
 
   pid = np->pid;
 
@@ -294,6 +304,10 @@ wait(void)
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
+        p->ctime = 0;
+        p->rutime = 0;
+        p->retime = 0;
+        p->sltime = 0;
         p->killed = 0;
         p->state = UNUSED;
         release(&ptable.lock);
@@ -536,10 +550,72 @@ procdump(void)
   }
 }
 
+void
+updatetime(void) {
+  struct proc *p = myproc();
+  if (p == 0)
+    return;
+  acquire(&ptable.lock);
+  switch (p->state) {
+    case RUNNING:
+      p->rutime++;
+      break;
+    case RUNNABLE:
+      p->retime++;
+      break;
+    case SLEEPING:
+      p->sltime++;
+      break;
+    default:
+      break;
+  }
+  release(&ptable.lock);
+}
+
 int waitSch(int *rutime, int *retime, int *sltime) {
-  *rutime = 1;
-  *retime = 2;
-  *sltime = 3;
-  cprintf("IM HERE!!!\n");
-  return -1;
+  struct proc *p;
+  int havekids, pid;
+  struct proc *curproc = myproc();
+  
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for exited children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent != curproc) // 跳过非子进程
+        continue;
+      havekids = 1; // 有子进程
+      if(p->state == ZOMBIE){ // 子进程ZOMBIE
+        // Found one.
+        // 重置子进程
+        pid = p->pid;
+        kfree(p->kstack); // 释放物理页
+        p->kstack = 0; 
+        freevm(p->pgdir);
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        *rutime = p->rutime;
+        *retime = p->retime;
+        *sltime = p->sltime;
+        p->ctime = 0;
+        p->rutime = 0;
+        p->retime = 0;
+        p->sltime = 0;
+        p->killed = 0;
+        p->state = UNUSED;
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || curproc->killed){ // 无子进程或被killed
+      release(&ptable.lock);
+      return -1;
+    }
+
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+  }
 }

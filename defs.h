@@ -120,6 +120,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+void            updatetime(void);
 int             waitSch(int*, int*, int*);
 
 // swtch.S
