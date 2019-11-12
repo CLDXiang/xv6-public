@@ -552,23 +552,28 @@ procdump(void)
 
 void
 updatetime(void) {
-  struct proc *p = myproc();
-  if (p == 0)
-    return;
+  struct proc *p;
+
   acquire(&ptable.lock);
-  switch (p->state) {
-    case RUNNING:
-      p->rutime++;
-      break;
-    case RUNNABLE:
-      p->retime++;
-      break;
-    case SLEEPING:
-      p->sltime++;
-      break;
-    default:
-      break;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    switch (p->state) {
+      case RUNNING:
+        p->rutime++;
+        // cprintf("rutime++: %d\n", p->rutime);
+        break;
+      case RUNNABLE:
+        p->retime++;
+        // cprintf("retime++: %d\n", p->retime);
+        break;
+      case SLEEPING:
+        p->sltime++;
+        // cprintf("sltime++: %d\n", p->sltime);
+        break;
+      default:
+        break;
+    }
   }
+  // cprintf("rutime: %d, retime: %d, sltime: %d\n", p->rutime, p->retime, p->sltime);
   release(&ptable.lock);
 }
 
@@ -589,15 +594,16 @@ int waitSch(int *rutime, int *retime, int *sltime) {
         // Found one.
         // 重置子进程
         pid = p->pid;
+        *rutime = p->rutime;
+        *retime = p->retime;
+        *sltime = p->sltime;
+        // cprintf("rutime: %d, retime: %d, sltime: %d\n", p->rutime, p->retime, p->sltime);
         kfree(p->kstack); // 释放物理页
         p->kstack = 0; 
         freevm(p->pgdir);
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
-        *rutime = p->rutime;
-        *retime = p->retime;
-        *sltime = p->sltime;
         p->ctime = 0;
         p->rutime = 0;
         p->retime = 0;

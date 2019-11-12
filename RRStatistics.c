@@ -2,7 +2,13 @@
 #include "stat.h"
 #include "user.h"
 
-#define N  1000
+#define N  50
+
+// int factorial(int n) {
+//   if (n == 1 || n == 0) return 1;
+//   return n * factorial(n - 1);
+// }
+
 
 void
 RRStatistics(void)
@@ -16,31 +22,30 @@ RRStatistics(void)
     pid = fork();
     if(pid < 0)
       break;
-    if(pid == 0)
+    if(pid == 0) {
+      int i;
+      volatile int s = 0;
+      for (i = 0; i < 100000000; i ++)
+        s++;
       exit();
-    printf(1, "pid = %d\n", pid);
+    }
   }
 
-  if(n == N){
-    printf(1, "fork claimed to work N times!\n", N);
-    exit();
-  }
+  // if(n == N){
+  //   printf(1, "fork claimed to work N times!\n", N);
+  //   exit();
+  // }
 
   for(; n > 0; n--){
     if(waitSch(&rutime, &retime, &sltime) < 0){
       printf(1, "wait stopped early\n");
       exit();
     }
-    printf(1, "pid = %d\n", getpid());
     printf(1, "rutime = %d, retime = %d, sltime = %d\n", rutime, retime, sltime);
   }
 
-  printf(1, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\n");
-
   if(waitSch(&rutime, &retime, &sltime) != -1){
     printf(1, "wait got too many\n");
-    printf(1, "pid = %d\n", getpid());
-    printf(1, "rutime = %d, retime = %d, sltime = %d\n", rutime, retime, sltime);
     exit();
   }
 
