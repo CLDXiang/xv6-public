@@ -535,3 +535,11 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int waitSch(int *rutime, int *retime, int *sltime) {
+  *rutime = 1;
+  *retime = 2;
+  *sltime = 3;
+  cprintf("IM HERE!!!\n");
+  return -1;
+}

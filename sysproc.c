@@ -89,3 +89,13 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_waitSch(void)
+{
+  char *rutime, *retime, *sltime;
+  if(argptr(0, &rutime, 4) < 0 || argptr(1, &retime, 4) < 0 || argptr(2, &sltime, 4) < 0)
+    return -1;
+  
+  return waitSch((int *)rutime, (int *)retime, (int *)sltime);
+}
