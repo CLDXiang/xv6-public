@@ -121,7 +121,7 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 void            updatetime(void);
-int             waitSch(int*, int*, int*);
+int             waitSch(int*, int*, int*, int*);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

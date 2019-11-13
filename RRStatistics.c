@@ -14,7 +14,6 @@ void
 RRStatistics(void)
 {
   int n, pid;
-  int rutime, retime, sltime;
 
   printf(1, "RRStatistics START\n");
 
@@ -25,26 +24,31 @@ RRStatistics(void)
     if(pid == 0) {
       int i;
       volatile int s = 0;
-      for (i = 0; i < 100000000; i ++)
+      for (i = 0; i < 100000000; i++)
         s++;
       exit();
     }
   }
 
-  // if(n == N){
-  //   printf(1, "fork claimed to work N times!\n", N);
-  //   exit();
-  // }
+  int ctime, rutime, retime, sltime;
+  int num_pid = 0;
+  int total = 0;
+
 
   for(; n > 0; n--){
-    if(waitSch(&rutime, &retime, &sltime) < 0){
+    pid = waitSch(&ctime, &rutime, &retime, &sltime);
+    if(pid < 0){
       printf(1, "wait stopped early\n");
       exit();
     }
-    printf(1, "rutime = %d, retime = %d, sltime = %d\n", rutime, retime, sltime);
+    printf(1, "pid: %d -- ctime = %d, rutime = %d, retime = %d, sltime = %d\n", pid, ctime, rutime, retime, sltime);
+    num_pid ++;
+    total += rutime + retime + sltime;
   }
 
-  if(waitSch(&rutime, &retime, &sltime) != -1){
+  printf(1, "Average time(RR): %d\n", total / num_pid); // unnecessary to be float
+
+  if(waitSch(&ctime, &rutime, &retime, &sltime) != -1){
     printf(1, "wait got too many\n");
     exit();
   }

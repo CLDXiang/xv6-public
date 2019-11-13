@@ -429,6 +429,10 @@ forkret(void)
   // Return to "caller", actually trapret (see allocproc).
 }
 
+void raise() {
+  panic("raise!");
+}
+
 // Atomically release lock and sleep on chan.
 // Reacquires lock when awakened.
 void
@@ -436,6 +440,8 @@ sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
   
+  // if(p->pid > 3) raise();
+
   if(p == 0)
     panic("sleep");
 
@@ -577,7 +583,7 @@ updatetime(void) {
   release(&ptable.lock);
 }
 
-int waitSch(int *rutime, int *retime, int *sltime) {
+int waitSch(int *ctime, int *rutime, int *retime, int *sltime) {
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
@@ -594,6 +600,7 @@ int waitSch(int *rutime, int *retime, int *sltime) {
         // Found one.
         // 重置子进程
         pid = p->pid;
+        *ctime = p->ctime;
         *rutime = p->rutime;
         *retime = p->retime;
         *sltime = p->sltime;
