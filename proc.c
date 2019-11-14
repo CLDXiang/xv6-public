@@ -147,6 +147,8 @@ userinit(void)
   p->retime = 0;
   p->sltime = 0;
 
+  p->priority = 0;
+
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
   // writes to be visible, and the lock is also needed
@@ -219,6 +221,8 @@ fork(void)
   np->rutime = 0;
   np->retime = 0;
   np->sltime = 0;
+
+  np->priority = curproc->priority;
 
   pid = np->pid;
 
@@ -308,6 +312,7 @@ wait(void)
         p->rutime = 0;
         p->retime = 0;
         p->sltime = 0;
+        p->priority = 0;
         p->killed = 0;
         p->state = UNUSED;
         release(&ptable.lock);
@@ -347,8 +352,22 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    // find max priority and the min pid with the max priority
+    int max_priority = 0, min_pid = -1;
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
+        continue;
+      if (min_pid == -1 || p->priority > max_priority) {
+        max_priority = p->priority;
+        min_pid = p->pid;
+      }
+      if (p->priority == max_priority)
+        min_pid = (p->pid < min_pid) ? p->pid : min_pid;
+    }
+    // find the process with the max priority and min pid (FCFS)
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE || p->pid != min_pid)
         continue;
 
       // Switch to chosen process.  It is the process's job
@@ -356,6 +375,7 @@ scheduler(void)
       // before jumping back to us.
       c->proc = p;
       switchuvm(p);
+      // cprintf("[%d] Scheduler: Run process %d, priority: %d\n", ticks, p->pid, p->priority);
       p->state = RUNNING;
 
       swtch(&(c->scheduler), p->context);
@@ -583,7 +603,7 @@ updatetime(void) {
   release(&ptable.lock);
 }
 
-int waitSch(int *ctime, int *rutime, int *retime, int *sltime) {
+int waitSch(int *ctime, int *rutime, int *retime, int *sltime, int *priority) {
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
@@ -604,6 +624,7 @@ int waitSch(int *ctime, int *rutime, int *retime, int *sltime) {
         *rutime = p->rutime;
         *retime = p->retime;
         *sltime = p->sltime;
+        *priority = p->priority;
         // cprintf("rutime: %d, retime: %d, sltime: %d\n", p->rutime, p->retime, p->sltime);
         kfree(p->kstack); // 释放物理页
         p->kstack = 0; 
@@ -615,6 +636,7 @@ int waitSch(int *ctime, int *rutime, int *retime, int *sltime) {
         p->rutime = 0;
         p->retime = 0;
         p->sltime = 0;
+        p->priority = 0;
         p->killed = 0;
         p->state = UNUSED;
         release(&ptable.lock);
@@ -631,4 +653,16 @@ int waitSch(int *ctime, int *rutime, int *retime, int *sltime) {
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
   }
+}
+
+int setPriority(int pid, int priority) {
+  struct proc *p;
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->pid == pid && p->state != UNUSED && p->state != ZOMBIE) {
+      p->priority = priority;
+      return 0;
+    }
+  }
+  return -1;
 }

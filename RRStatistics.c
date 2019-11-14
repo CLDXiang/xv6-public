@@ -30,13 +30,13 @@ RRStatistics(void)
     }
   }
 
-  int ctime, rutime, retime, sltime;
+  int ctime, rutime, retime, sltime, priority;
   int num_pid = 0;
   int total = 0;
 
 
   for(; n > 0; n--){
-    pid = waitSch(&ctime, &rutime, &retime, &sltime);
+    pid = waitSch(&ctime, &rutime, &retime, &sltime, &priority);
     if(pid < 0){
       printf(1, "wait stopped early\n");
       exit();
@@ -48,7 +48,7 @@ RRStatistics(void)
 
   printf(1, "Average time(RR): %d\n", total / num_pid); // unnecessary to be float
 
-  if(waitSch(&ctime, &rutime, &retime, &sltime) != -1){
+  if(waitSch(&ctime, &rutime, &retime, &sltime, &priority) != -1){
     printf(1, "wait got too many\n");
     exit();
   }

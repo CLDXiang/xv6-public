@@ -93,9 +93,18 @@ sys_uptime(void)
 int
 sys_waitSch(void)
 {
-  char *ctime, *rutime, *retime, *sltime;
-  if(argptr(0, &ctime, 4) < 0 || argptr(1, &rutime, 4) < 0 || argptr(2, &retime, 4) < 0 || argptr(3, &sltime, 4) < 0)
+  char *ctime, *rutime, *retime, *sltime, *priority;
+  if(argptr(0, &ctime, 4) < 0 || argptr(1, &rutime, 4) < 0 || argptr(2, &retime, 4) < 0 || argptr(3, &sltime, 4) < 0 || argptr(4, &priority, 4) < 0)
     return -1;
   
-  return waitSch((int *)ctime, (int *)rutime, (int *)retime, (int *)sltime);
+  return waitSch((int *)ctime, (int *)rutime, (int *)retime, (int *)sltime, (int *)priority);
+}
+
+int
+sys_setPriority(void)
+{
+  int pid, priority;
+  if(argint(0, &pid) < 0 || argint(1, &priority) < 0)
+    return -1;
+  return setPriority(pid, priority);
 }
